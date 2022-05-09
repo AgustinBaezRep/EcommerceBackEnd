@@ -9,7 +9,7 @@ namespace Api
         public static void DependencyInjection(IServiceCollection services)
         {
             services.AddScoped<IUserAuthService, UserAuthService>();
-            services.AddScoped<IClientService, ClientService>();
+            services.AddScoped<IProductService, ProductService>();
         }
     }
 }
