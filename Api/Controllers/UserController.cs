@@ -27,12 +27,12 @@ namespace Api.Controllers
         }
 
         [HttpPost("Login")]
-        public ActionResult<TokenResponseDTO> AuthenticateUser([FromBody] AuthRequestViewModel User)
+        public async Task<ActionResult<GenericResponse<UserWithTokenDTO>>> AuthenticateUser([FromBody] AuthRequestViewModel User)
         {
-            TokenResponseDTO oResponse = new TokenResponseDTO();
+            var oResponse = new GenericResponse<UserWithTokenDTO>();
             try
             {
-                oResponse = _userAuthService.Auth(User);
+                oResponse = await _userAuthService.AuthenticateUser(User);
                 if (oResponse.Data == null) return NotFound(oResponse);
             }
             catch (Exception e)
@@ -45,12 +45,12 @@ namespace Api.Controllers
 
         [HttpGet("GetUserRol")]
         [Authorize]
-        public ActionResult<GenericResponse<UserRolDTO>> GetUserRol()
+        public async Task<ActionResult<GenericResponse<UserRolDTO>>> GetUserRol()
         {
             var oResponse = new GenericResponse<UserRolDTO>();
             try
             {
-                oResponse = _userAuthService.GetUserRol();
+                oResponse = await _userAuthService.GetUserRol();
                 if (oResponse.Data == null) return NotFound(oResponse);
             }
             catch (Exception e)
@@ -63,13 +63,13 @@ namespace Api.Controllers
 
         [HttpGet("GetClients")]
         [Authorize]
-        public async Task<ActionResult<List<ClientsDTO>>> GetClients()
+        public async Task<ActionResult<GenericResponse<List<ClientsDTO>>>> GetClients()
         {
-            List<ClientsDTO> oResponse = new List<ClientsDTO>();
+            var oResponse = new GenericResponse<List<ClientsDTO>>();
             try
             {
                 oResponse = await _userAuthService.GetClients();
-                if (oResponse.Count == 0) return NotFound();
+                if (oResponse.Data.Count == 0) return NotFound(oResponse);
             }
             catch (Exception e)
             {
@@ -81,13 +81,13 @@ namespace Api.Controllers
 
         [HttpGet("GetClient")]
         [Authorize]
-        public ActionResult<ClientsDTO> GetClient([FromQuery] int id)
+        public async Task<ActionResult<GenericResponse<ClientsDTO>>> GetClientById([FromQuery] int id)
         {
-            ClientsDTO oResponse = new ClientsDTO();
+            var oResponse = new GenericResponse<ClientsDTO>();
             try
             {
-                oResponse = _userAuthService.GetClient(id);
-                if (oResponse == null) return NotFound();
+                oResponse = await _userAuthService.GetClientById(id);
+                if (oResponse.Data == null) return NotFound(oResponse);
             }
             catch (Exception e)
             {
@@ -97,20 +97,21 @@ namespace Api.Controllers
             return Ok(oResponse);
         }
 
-        [HttpPost("PostClient")] // no se necesita autenticacion para crear un usuario
-        public async Task<ActionResult> CreateClient([FromBody] ClientsViewModel client)
+        [HttpPost("PostClient")]
+        public async Task<ActionResult<GenericResponse<bool>>> CreateClient([FromBody] ClientsViewModel client)
         {
+            var oResponse = new GenericResponse<bool>();
             try
             {
-                bool Ok = await _userAuthService.CreateClient(client);
-                if (!Ok) return BadRequest();
+                oResponse = await _userAuthService.CreateClient(client);
+                if (!oResponse.Data) return BadRequest(oResponse);
             }
             catch (Exception e)
             {
                 _logger.LogError(e.Message);
             }
 
-            return Ok();
+            return Ok(oResponse);
         }
     }
 }

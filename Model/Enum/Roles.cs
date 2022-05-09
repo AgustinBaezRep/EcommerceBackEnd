@@ -8,7 +8,7 @@ namespace Model.Enum
 {
     public enum Roles
     {
-        Administrador = 1,
-        Cliente = 2
+        Admin = 1,
+        Customer = 2
     }
 }

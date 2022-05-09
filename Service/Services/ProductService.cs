@@ -21,13 +21,14 @@ namespace Service.Services
             this._context = _context;
         }
 
-        public async Task<GenericResponse<List<ProductDTO>>> GetProducts()
+        public async Task<GenericResponse<List<ProductDTO>>> GetSixRandomProducts()
         {
             var oResponse = new GenericResponse<List<ProductDTO>>();
             try
             {
+                var random = new Random();
                 oResponse.Data = new List<ProductDTO>();
-                oResponse.Data = await _context.Product.Select(x => new ProductDTO() { Description = x.Description}).ToListAsync();
+                oResponse.Data = await _context.Product.Select(x => new ProductDTO() { Description = x.Description}).Skip(random.Next(5,10)).Take(6).ToListAsync();
 
                 return oResponse;
             }

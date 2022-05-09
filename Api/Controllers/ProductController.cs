@@ -29,13 +29,13 @@ namespace Api.Controllers
         }
 
         [HttpGet("GetProducts")]
-        public async Task<ActionResult<GenericResponse<ProductDTO>>> GetProducts()
+        public async Task<ActionResult<GenericResponse<ProductDTO>>> GetSixRandomProducts()
         {
             GenericResponse<List<ProductDTO>> oResponse = new GenericResponse<List<ProductDTO>>();
             try
             {
-                oResponse = await _productService.GetProducts();
-                if (oResponse.Data == null) return NotFound(oResponse);
+                oResponse = await _productService.GetSixRandomProducts();
+                if (oResponse.Data.Count == 0) return NotFound(oResponse);
             }
             catch (Exception e)
             {

@@ -10,6 +10,6 @@ namespace Service.IServices
 {
     public interface IProductService
     {
-        Task<GenericResponse<List<ProductDTO>>> GetProducts();
+        Task<GenericResponse<List<ProductDTO>>> GetSixRandomProducts();
     }
 }

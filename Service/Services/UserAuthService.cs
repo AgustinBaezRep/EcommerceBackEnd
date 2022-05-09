@@ -7,6 +7,7 @@ using Model.Common;
 using Model.Dto;
 using Model.Enum;
 using Model.ViewModel;
+using Service.CommonServices;
 using Service.IServices;
 using System;
 using System.Collections.Generic;
@@ -29,12 +30,12 @@ namespace Service.Services
             this._appSettings = _appSettings.Value;
         }
 
-        public TokenResponseDTO Auth(AuthRequestViewModel User)
+        public async Task<GenericResponse<UserWithTokenDTO>> AuthenticateUser(AuthRequestViewModel User)
         {
-            TokenResponseDTO oResponse = new TokenResponseDTO();
+            var oResponse = new GenericResponse<UserWithTokenDTO>();
             try
             {
-                Users user = _context.Users.FirstOrDefault(x => x.Email == User.Email && x.Password == User.Password);
+                Users user = await _context.Users.FirstOrDefaultAsync(x => x.Email == User.Email && x.Password == User.Password);
                 if (user == null)
                 {
                     oResponse.Data = null;
@@ -43,16 +44,11 @@ namespace Service.Services
                     return oResponse;
                 }
 
-                oResponse.Data = new UserWithTokenDTO()
-                {
-                    Email = User.Email,
-                    Token = this.GetToken(user)
-                };
+                oResponse.Data = new UserWithTokenDTO() { Email = User.Email, Token = this.GetToken(user) };
             }
             catch (Exception e)
             {
-                oResponse.Success = false;
-                oResponse.Messagge = string.Format("Ocurrio el siguiente error {0}", e.Message);
+                return CommonMethods<UserWithTokenDTO>.ErrorManager(e);
             }
 
             return oResponse;
@@ -77,14 +73,22 @@ namespace Service.Services
             return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
         }
 
-        public GenericResponse<UserRolDTO> GetUserRol()
+        public async Task<GenericResponse<UserRolDTO>> GetUserRol()
         {
             var oResponse = new GenericResponse<UserRolDTO>();
             try
             {
-                oResponse.Data = new UserRolDTO();
-                oResponse.Data.Clients.AddRange(_context.Users.Where(x => x.IdRol.Equals((int)Roles.Cliente)).Select(x => new User() { Name = x.Name, Rol = x.IdRol.ToString() }).ToList());
-                oResponse.Data.Admins.AddRange(_context.Users.Where(x => x.IdRol.Equals((int)Roles.Administrador)).Select(x => new User() { Name = x.Name, Rol = x.IdRol.ToString() }).ToList());
+                oResponse.Data = new UserRolDTO()
+                {
+                    Clients = await _context.Users.Join(_context.Rol, u => u.IdRol, r => r.Id, (u, r) => new { User = u, Rol = r })
+                                    .Where(x => x.Rol.Id.Equals((int)Roles.Customer))
+                                    .Select(x => new User() { Name = x.User.Name, Rol = x.Rol.Description })
+                                    .ToListAsync(),
+                    Admins = await _context.Users.Join(_context.Rol, u => u.IdRol, r => r.Id, (u, r) => new { User = u, Rol = r })
+                                    .Where(x => x.Rol.Id.Equals((int)Roles.Admin))
+                                    .Select(x => new User() { Name = x.User.Name, Rol = x.Rol.Description })
+                                    .ToListAsync()
+                };
 
                 if (oResponse.Data.Admins.Count == 0 && oResponse.Data.Clients.Count == 0)
                 {
@@ -96,19 +100,17 @@ namespace Service.Services
             }
             catch (Exception e)
             {
-                oResponse.Data = null;
-                oResponse.Messagge = string.Format("Ocurrio el siguiente error {0}", e.Message);
-                oResponse.Success = false;
-                return oResponse;
+                return CommonMethods<UserRolDTO>.ErrorManager(e);
             }
         }
 
-        public ClientsDTO GetClient(int id)
+        public async Task<GenericResponse<ClientsDTO>> GetClientById(int id)
         {
-            ClientsDTO oResponse = new ClientsDTO();
+            var oResponse = new GenericResponse<ClientsDTO>();
             try
             {
-                ClientsDTO client = _context.Users.Where(x => x.Id == id)
+                oResponse.Data = new ClientsDTO();
+                ClientsDTO client = await _context.Users.Where(x => x.Id == id)
                                     .Select(x => new ClientsDTO()
                                     {
                                         Name = x.Name,
@@ -117,43 +119,45 @@ namespace Service.Services
                                         Dni = x.Dni,
                                         Phone = x.Phone,
                                         Email = x.Email
-                                    }).FirstOrDefault();
+                                    }).FirstOrDefaultAsync();
 
-                oResponse = client != null ? client : null;
+                oResponse.Data = client ?? null;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                return oResponse;
+                return CommonMethods<ClientsDTO>.ErrorManager(e);
             }
 
             return oResponse;
         }
 
-        public async Task<List<ClientsDTO>> GetClients()
+        public async Task<GenericResponse<List<ClientsDTO>>> GetClients()
         {
-            List<ClientsDTO> oResponse = new List<ClientsDTO>();
+            var oResponse = new GenericResponse<List<ClientsDTO>>();
             try
             {
-                oResponse = await _context.Users.Select(x => new ClientsDTO()
-                            {
-                                Name = x.Name,
-                                Surname = x.Surname,
-                                DateBirth = x.DateBirth,
-                                Dni = x.Dni,
-                                Phone = x.Phone,
-                                Email = x.Email
-                            }).ToListAsync();
+                oResponse.Data = new List<ClientsDTO>();
+                oResponse.Data = await _context.Users.Select(x => new ClientsDTO()
+                {
+                    Name = x.Name,
+                    Surname = x.Surname,
+                    DateBirth = x.DateBirth,
+                    Dni = x.Dni,
+                    Phone = x.Phone,
+                    Email = x.Email
+                }).ToListAsync();
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                return oResponse;
+                return CommonMethods<List<ClientsDTO>>.ErrorManager(e);
             }
 
             return oResponse;
         }
 
-        public async Task<bool> CreateClient(ClientsViewModel client)
+        public async Task<GenericResponse<bool>> CreateClient(ClientsViewModel client)
         {
+            var oResponse = new GenericResponse<bool>();
             try
             {
                 _context.Users.Add(new Users()
@@ -169,11 +173,13 @@ namespace Service.Services
                     IdRol = client.IdRol
                 });
                 await _context.SaveChangesAsync();
-                return true;
+                oResponse.Data = true;
+                oResponse.Messagge = "Usuario creado de manera exitosa";
+                return oResponse;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                return false;
+                return CommonMethods<bool>.ErrorManager(e);
             }
         }
     }
